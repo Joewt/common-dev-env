@@ -1,42 +1,27 @@
-#版本号
 version: "3"
-#服务
 services:
-    #mysql服务
+
     mysql:
-      #服务器镜像
-      build:
-        image: joewt/idocker_mysql:v1
-        container_name: idocker_mysql
-        args:
-          - IDOCKER_MYSQL_VERSION=${MYSQL_VERSION}
-     # image: mysql:latest
-     #磁盘映射。./data/mysql 是宿主的目录。后者是容器里的目录。
+      image: joewt/idocker_mysql:5.7
+      container_name: idocker_mysql
       volumes:
         - ${DATA_PATH_HOST}/mysql${MYSQL_VERSION}:/var/lib/mysql
         - ${LOG_PATH_HOST}/mysql${MYSQL_VERSION}:/var/log/mysql
       restart: always
-      # 端口映射。前者是宿主的。后者是容器里端口
       ports:
         - "3306:3306"
-      #环境变量
       environment:
-      #mysql的root密码
         - MYSQL_ROOT_PASSWORD=${PMA_ROOT_PASSWORD}
-    #php-fpm服务
+
     php-fpm:
-      build:
-        image: joewt/idocker_php-fpm:5.6
-        container_name: idocker_php-fpm
-        args:
-          - IDOCKER_PHP_VERSION=${PHP_VERSION}
+      image: joewt/idocker_php-fpm:5.6
+      container_name: idocker_php-fpm
       volumes:
        - ${APP_PATH_HOST}:${APP_PATH_CONTAINER}
        - ${LOG_PATH_HOST}/php-fpm:/var/log/php-fpm
        - ${LOG_PATH_HOST}/php:/var/log/php
-       #服务器镜像构建的目录。会在该目录下寻找dockerfile构建镜像。
       restart: always
-    #nginx服务
+
     nginx:
       image: joewt/idocker_nginx:v1
       container_name: idocker_nginx
@@ -50,7 +35,7 @@ services:
        - "80:80"
        - "8081:8081"
       restart: always
-    #redis服务
+
     redis:
       image: joewt/idocker_redis:v1
       container_name: idocker_redis
@@ -59,6 +44,7 @@ services:
       ports:
         - "6379:6379"
       restart: always
+
     phpmyadmin:
       image: joewt/idocker_phpmyadmin:v1
       container_name: idocker_phpmyadmin
