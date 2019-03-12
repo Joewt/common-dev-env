@@ -2,7 +2,7 @@ version: "3"
 services:
 
     mysql:
-      image: joewt/idocker_mysql:5.7
+      image: mysql:${MYSQL_VERSION}
       container_name: idocker_mysql
       volumes:
         - ${DATA_PATH_HOST}/mysql${MYSQL_VERSION}:/var/lib/mysql
@@ -14,7 +14,7 @@ services:
         - MYSQL_ROOT_PASSWORD=${PMA_ROOT_PASSWORD}
 
     php-fpm:
-      image: joewt/idocker_php-fpm:5.6
+      image: joewt/idocker_php-fpm:${PHP_VERSION}
       container_name: idocker_php-fpm
       volumes:
        - ${APP_PATH_HOST}:${APP_PATH_CONTAINER}
