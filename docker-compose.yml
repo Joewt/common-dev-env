@@ -1,57 +1,90 @@
 version: "3"
 services:
-
     mysql:
-      image: mysql:${MYSQL_VERSION}
-      container_name: idocker_mysql
+      image: ${MYSQL_IMAGE}
+      container_name: common_mysql
       volumes:
-        - ${DATA_PATH_HOST}/mysql${MYSQL_VERSION}:/var/lib/mysql
-        - ${LOG_PATH_HOST}/mysql${MYSQL_VERSION}:/var/log/mysql
+        - ${DATA_PATH_HOST}/mysql:/var/lib/mysql
+        - ${LOG_PATH_HOST}/mysql:/var/log/mysql
+        - ./mysql/conf/mysqld.cnf:/etc/mysql/conf.d/mysqld.cnf
       restart: always
       ports:
-        - "3306:3306"
+        - "3316:3306"
       environment:
-        - MYSQL_ROOT_PASSWORD=${PMA_ROOT_PASSWORD}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - LANG=C.UTF-8
+        - TZ=Asia/shanghai
 
-    php-fpm:
-      image: joewt/idocker_php-fpm:${PHP_VERSION}
-      container_name: idocker_php-fpm
-      volumes:
-       - ${APP_PATH_HOST}:${APP_PATH_CONTAINER}
-       - ${LOG_PATH_HOST}/php-fpm:/var/log/php-fpm
-       - ${LOG_PATH_HOST}/php:/var/log/php
-      restart: always
+    # php-fpm:
+    #   image: ${PHP_IMAGE}
+    #   container_name: common_php-fpm
+    #   volumes:
+    #    - ${APP_PATH_HOST}:${APP_PATH_CONTAINER}
+    #    - ${LOG_PATH_HOST}/php-fpm:/var/log/php-fpm
+    #    - ${LOG_PATH_HOST}/php:/var/log/php
+    #   restart: always
 
-    nginx:
-      image: joewt/idocker_nginx:v1
-      container_name: idocker_nginx
-      depends_on:
-       - php-fpm
-      volumes:
-       - ${APP_PATH_HOST}:${APP_PATH_CONTAINER}
-       - ${NGINX_SITES_PATH}:/etc/nginx/conf.d
-       - ${LOG_PATH_HOST}/nginx:/var/log/nginx
-      ports:
-       - "80:80"
-       - "8081:8081"
-      restart: always
+    # nginx:
+    #   image: joewt/common_nginx:v1
+    #   container_name: common_nginx
+    #   depends_on:
+    #    - php-fpm
+    #   volumes:
+    #    - ${APP_PATH_HOST}:${APP_PATH_CONTAINER}
+    #    - ${NGINX_SITES_PATH}:/etc/nginx/conf.d
+    #    - ${LOG_PATH_HOST}/nginx:/var/log/nginx
+    #   ports:
+    #    - "80:80"
+    #    - "8081:8081"
+    #   restart: always
 
     redis:
-      image: joewt/idocker_redis:v1
-      container_name: idocker_redis
+      image: redis:7.0.5
+      container_name: common_redis
+      command: redis-server --requirepass ${REDIS_PASSWORD}
       volumes:
-        - ${DATA_PATH_HOST}/redis:/data
+      - ${DATA_PATH_HOST}/redis:/usr/local/etc/redis/data
       ports:
-        - "6379:6379"
+        - "6381:6379"
       restart: always
-
-    phpmyadmin:
-      image: joewt/idocker_phpmyadmin:v1
-      container_name: idocker_phpmyadmin
-      depends_on:
-        - mysql
-      environment:
-        - PMA_ARBITRARY=1
-        - MYSQL_ROOT_PASSWORD=${PMA_ROOT_PASSWORD}
+    nacos:
+      image: nacos/nacos-server:${NACOS_VERSION}
+      container_name: nacos-standalone
+      env_file:
+        - ./env/nacos-standlone-mysql.env
+      volumes:
+        - ${DATA_PATH_HOST}/standalone-logs/:/home/nacos/logs
       ports:
-        - "8080:80"
+        - "8848:8848"
+        - "9848:9848"
+        - "9555:9555"
+      depends_on:
+        mysql:
+          condition: service_healthy
+    prometheus:
+      container_name: prometheus
+      image: prom/prometheus:latest
+      volumes:
+        - ./prometheus/prometheus-standalone.yaml:/etc/prometheus/prometheus.yml
+      ports:
+        - "9090:9090"
+      depends_on:
+        - nacos
+      restart: on-failure
+    grafana:
+      container_name: grafana
+      image: grafana/grafana:latest
+      ports:
+        - 3000:3000
+      restart: on-failure
+
+    # phpmyadmin:
+    #   image: joewt/common_phpmyadmin:v1
+    #   container_name: common_phpmyadmin
+    #   depends_on:
+    #     - mysql
+    #   environment:
+    #     - PMA_ARBITRARY=1
+    #     - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    #   ports:
+    #     - "8080:80"

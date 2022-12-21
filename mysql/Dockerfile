@@ -1,10 +1,10 @@
-ARG IDOCKER_MYSQL_VERSION
+ARG MYSQL_IMAGE
 
-FROM mysql:${IDOCKER_MYSQL_VERSION}
+FROM ${MYSQL_IMAGE}
 
 RUN echo "Asia/shanghai" > /etc/timezone;
 
 RUN rm -rf /etc/localtime;
 RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
-ADD ./conf.d/ /etc/mysql/conf.d
+ADD ./conf/ /etc/mysql/conf.d
