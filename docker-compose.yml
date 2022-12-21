@@ -48,7 +48,10 @@ services:
         - "6381:6379"
       restart: always
     nacos:
-      image: nacos/nacos-server:${NACOS_VERSION}
+      # image: nacos/nacos-server:${NACOS_VERSION}
+      # image: zhusaidong/nacos-server-m1:2.0.3
+      build:
+        context: ./nacos/build
       container_name: nacos-standalone
       env_file:
         - ./env/nacos-standlone-mysql.env
