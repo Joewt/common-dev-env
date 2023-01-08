@@ -41,7 +41,7 @@ services:
     redis:
       image: redis:7.0.5
       container_name: common_redis
-      command: redis-server --requirepass ${REDIS_PASSWORD}
+      # command: redis-server --requirepass ${REDIS_PASSWORD}
       volumes:
       - ${DATA_PATH_HOST}/redis:/usr/local/etc/redis/data
       ports:
@@ -52,7 +52,7 @@ services:
       # image: zhusaidong/nacos-server-m1:2.0.3
       build:
         context: ./nacos/build
-      container_name: nacos-standalone
+      container_name: common_nacos-standalone
       env_file:
         - ./env/nacos-standlone-mysql.env
       volumes:
@@ -64,8 +64,9 @@ services:
       depends_on:
         mysql:
           condition: service_healthy
+      restart: always
     prometheus:
-      container_name: prometheus
+      container_name: common_prometheus
       image: prom/prometheus:latest
       volumes:
         - ./prometheus/prometheus-standalone.yaml:/etc/prometheus/prometheus.yml
@@ -75,12 +76,76 @@ services:
         - nacos
       restart: on-failure
     grafana:
-      container_name: grafana
+      container_name: common_grafana
       image: grafana/grafana:latest
       ports:
         - 3000:3000
       restart: on-failure
+    # etcd:
+    #   image: docker.io/bitnami/etcd:3.5
+    #   environment:
+    #     - ALLOW_NONE_AUTHENTICATION=yes
+    #   volumes:
+    #     - ${DATA_PATH_HOST}/etcd_data:/bitnami/etcd
+    etcd:
+      image: quay.io/coreos/etcd:latest
+      container_name: common_etcd
+      #command: etcd -name etcd1 -advertise-client-urls http://0.0.0.0:2379 -listen-client-urls http://0.0.0.0:2379 -listen-peer-urls http://0.0.0.0:2380 -initial-cluster-token etcd-cluster -initial-cluster "etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380" -initial-cluster-state new
+      command: etcd -name etcd1 -advertise-client-urls http://0.0.0.0:2379 -listen-client-urls http://0.0.0.0:2379 
+      ports:
+        - "2379:2379"
+        - "2380:2380"
+    nsqlookupd:
+      image: nsqio/nsq
+      container_name: common_nsqlookupd
+      command: /nsqlookupd
+      ports:
+        - "4160:4160"
+        - "4161:4161"
+      restart: always
+    nsqd:
+      image: nsqio/nsq
+      container_name: common_nsqd
+      command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 -max-req-timeout=744h
+      depends_on:
+        - nsqlookupd
+      ports:
+        - "4150"
+        - "4151"
+      restart: always
+    nsqadmin:
+      image: nsqio/nsq
+      container_name: common_nsqadmin
+      command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+      depends_on:
+        - nsqlookupd  
+      ports:
+        - "4171:4171"
+      restart: always
+    zookeeper:
+      image: confluentinc/cp-zookeeper:7.3.0
+      container_name: zookeeper
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
 
+    broker:
+      image: confluentinc/cp-kafka:7.3.0
+      container_name: broker
+      ports:
+    # To learn about configuring Kafka for access across networks see
+    # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
+        - "9092:9092"
+      depends_on:
+        - zookeeper
+      environment:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     # phpmyadmin:
     #   image: joewt/common_phpmyadmin:v1
     #   container_name: common_phpmyadmin
